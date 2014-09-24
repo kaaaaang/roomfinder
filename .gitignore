@@ -1,0 +1,35 @@
+# IDEA files
+*.ipr
+*.iws
+*.iml
+*.idea
+ 
+# Eclipse files
+.classpath
+.project
+.settings/
+ 
+# Build directory
+build/
+target/
+ 
+# OS X files
+.DS_Store
+ 
+#Emacs files
+*~
+\#*\#
+ 
+#Log4j properties
+log4j.properties
+log4j.xml
+ 
+#Winmerge bak
+*\.bak
+ 
+#Configuration files
+perrier-*.properties
+ 
+ 
+#Java classes
+*.class

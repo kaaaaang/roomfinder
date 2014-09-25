@@ -1,5 +1,6 @@
 package roomfinder.controller;
 
+import roomfinder.domain.Room;
 import roomfinder.exception.ExchangeServiceException;
 
 import java.text.ParseException;
@@ -13,5 +14,5 @@ import java.util.List;
  * To change this template use File | Settings | File Templates.
  */
 public interface RoomFinderController {
-    public List<String> findRoom(String startDate, String endDate, Boolean isCasual) throws ExchangeServiceException, ParseException;
+    public List<Room> findRoom(String startDate, String endDate, int requiredCapacity, Boolean isCasual) throws ExchangeServiceException, ParseException;
 }

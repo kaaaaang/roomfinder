@@ -10,6 +10,7 @@ package roomfinder.domain;
 public class Room {
     private String name;
     private String email;
+    private int capacity;
     private boolean isCasual;
 
     public String getName() {
@@ -26,6 +27,14 @@ public class Room {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public int getCapacity() {
+        return capacity;
+    }
+
+    public void setCapacity(int capacity) {
+        this.capacity = capacity;
     }
 
     public boolean isCasual() {

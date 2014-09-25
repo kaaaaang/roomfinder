@@ -10,6 +10,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created with IntelliJ IDEA.
@@ -45,8 +47,13 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
 
                 for (EmailAddress addr : roomEmails) {
                     Room room = new Room();
+
                     room.setName(addr.getName());
+                    System.out.println(addr.getName());
                     room.setEmail(addr.getAddress());
+
+                    room.setCapacity(extractCapacity(addr.getName()));
+                    room.setCasual(extractCasual(addr.getName()));
                     rooms.add(room);
                 }
             }
@@ -55,15 +62,17 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
     }
 
     @Override
-    public List<String> getAllAvailableRooms(List<Room> rooms, Date startTime, Date endTime, Boolean isCasual) throws ExchangeServiceException {
+    public List<Room> getAllAvailableRooms(List<Room> rooms, Date startTime,
+                                           Date endTime, int requiredCapacity,
+                                           Boolean isCasual)throws ExchangeServiceException {
         List<AttendeeInfo> attendees = new ArrayList<AttendeeInfo>();
-        List<String> availableRooms = new ArrayList<String>();
+        List<Room> availableRooms = new ArrayList<Room>();
 
         for(Room room : rooms) {
-            if(isCasual == null || room.isCasual() == isCasual) {
+            if((isCasual == null || room.isCasual() == isCasual) && room.getCapacity() >= requiredCapacity) {
                 attendees.add(new AttendeeInfo(room.getEmail()));
             }
-            if(attendees.size() == 100) {
+            if(attendees.size() == 75) {
                 GetUserAvailabilityResults results = null;
                 try {
                     results = service.getUserAvailability(attendees,
@@ -72,7 +81,7 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
                     throw new ExchangeServiceException(e);
                 }
 
-                availableRooms.addAll(getAvailableRooms(attendees, results));
+                availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
                 attendees.clear();
             }
         }
@@ -85,23 +94,38 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
             throw new ExchangeServiceException(e);
         }
 
-        availableRooms.addAll(getAvailableRooms(attendees, results));
+        availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
         attendees.clear();
 
         return availableRooms;
     }
 
-    private List<String> getAvailableRooms(List<AttendeeInfo> attendees, GetUserAvailabilityResults results) {
-        List<String> availableRooms = new ArrayList<String>();
+    private List<Room> getAvailableRooms(List<Room> rooms, List<AttendeeInfo> attendees, GetUserAvailabilityResults results) {
+        List<Room> availableRooms = new ArrayList<Room>();
         int attendeeIndex = 0;
         for (AttendeeAvailability attendeeAvailability : results.getAttendeesAvailability()) {
             if (attendeeAvailability.getErrorCode() == ServiceError.NoError) {
                 if(attendeeAvailability.getCalendarEvents().size() == 0) {
-                    availableRooms.add(attendees.get(attendeeIndex).getSmtpAddress());
+                    for(Room room : rooms) {
+                        if(room.getEmail().equals(attendees.get(attendeeIndex).getSmtpAddress())) {
+                            availableRooms.add(room);
+                        }
+                    }
                 }
             }
             attendeeIndex++;
         }
         return availableRooms;
+    }
+
+    private int extractCapacity(String conferenceRoomName) {
+        Pattern pattern = Pattern.compile( "\\[(\\d+)\\]" );
+        Matcher matcher = pattern.matcher(conferenceRoomName);
+        matcher.find();
+        return Integer.parseInt(matcher.group(1));
+    }
+
+    private boolean extractCasual(String conferenceRoomName) {
+        return conferenceRoomName.contains("Casual");
     }
 }

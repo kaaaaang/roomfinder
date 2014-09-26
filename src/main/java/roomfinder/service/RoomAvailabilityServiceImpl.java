@@ -106,20 +106,21 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
         }
 
         GetUserAvailabilityResults results = null;
-        for(int i = 0; i < RETRY_COUNT; i++) {
-            try {
-                results = service.getUserAvailability(attendees,
-                        new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
-            } catch(Exception e) {
-                throw new ExchangeServiceException(e);
+        if(attendees.size() > 0) {
+            for(int i = 0; i < RETRY_COUNT; i++) {
+                try {
+                    results = service.getUserAvailability(attendees,
+                            new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
+                } catch(Exception e) {
+                    throw new ExchangeServiceException(e);
+                }
+                if(results != null) {
+                    break;
+                }
             }
-            if(results != null) {
-                break;
-            }
-        }
 
-        availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
-        attendees.clear();
+            availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
+        }
 
         return availableRooms;
     }

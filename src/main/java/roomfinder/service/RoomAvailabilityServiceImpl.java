@@ -25,13 +25,22 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
     @Autowired
     ExchangeService service;
 
+    private static final int RETRY_COUNT = 10;
+    private static final int BATCH_SIZE = 75;
     @Override
     public List<Room> getAllRooms() throws ExchangeServiceException {
         EmailAddressCollection roomList = null;
-        try {
-            roomList = service.getRoomLists();
-        } catch (Exception e) {
-            throw new ExchangeServiceException(e);
+
+        // So, this API we are using dies randomly. It also only throws up "Exception"s
+        for(int i = 0; i < RETRY_COUNT; i++) {
+            try {
+                roomList = service.getRoomLists();
+            } catch (Exception e) {
+                // do nothing because this shitty service dies sometimes randomly
+            }
+            if(roomList != null) {
+                break;
+            }
         }
         List<Room> rooms = new ArrayList<Room>();
 
@@ -39,10 +48,15 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
             if (address.toString().contains("Tower") || address.toString().contains("Metro") || address.toString().contains("Annex") ||
                     address.toString().contains("Basement") || address.toString().contains("Lobby")) {
                 Collection<EmailAddress> roomEmails = null;
-                try {
-                    roomEmails = service.getRooms(address);
-                } catch (Exception e) {
-                    throw new ExchangeServiceException(e);
+                for(int i = 0; i < RETRY_COUNT; i++) {
+                    try {
+                        roomEmails = service.getRooms(address);
+                    } catch (Exception e) {
+                        // do nothing because this shitty service dies sometimes
+                    }
+                    if(roomEmails != null) {
+                        break;
+                    }
                 }
 
                 for (EmailAddress addr : roomEmails) {
@@ -72,13 +86,18 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
             if((isCasual == null || room.isCasual() == isCasual) && room.getCapacity() >= requiredCapacity) {
                 attendees.add(new AttendeeInfo(room.getEmail()));
             }
-            if(attendees.size() == 75) {
+            if(attendees.size() == BATCH_SIZE) {
                 GetUserAvailabilityResults results = null;
-                try {
-                    results = service.getUserAvailability(attendees,
-                            new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
-                } catch(Exception e) {
-                    throw new ExchangeServiceException(e);
+                for(int i = 0; i < RETRY_COUNT; i++) {
+                    try {
+                        results = service.getUserAvailability(attendees,
+                                new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
+                    } catch(Exception e) {
+                        throw new ExchangeServiceException(e);
+                    }
+                    if(results != null) {
+                        break;
+                    }
                 }
 
                 availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
@@ -87,11 +106,16 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
         }
 
         GetUserAvailabilityResults results = null;
-        try {
-            results = service.getUserAvailability(attendees,
-                    new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
-        } catch(Exception e) {
-            throw new ExchangeServiceException(e);
+        for(int i = 0; i < RETRY_COUNT; i++) {
+            try {
+                results = service.getUserAvailability(attendees,
+                        new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
+            } catch(Exception e) {
+                throw new ExchangeServiceException(e);
+            }
+            if(results != null) {
+                break;
+            }
         }
 
         availableRooms.addAll(getAvailableRooms(rooms, attendees, results));

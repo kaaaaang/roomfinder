@@ -18,39 +18,48 @@
 			$scope.roomtype = "all";
 			$scope.loading = false;
 
-			$scope.starttimechange = function() {
-				var newTimeArr = $scope.starttime.split(":");
-				$scope.endtime = $scope.starttime;
-				$scope.dtstart.setHours(newTimeArr[0]);
-				$scope.dtstart.setMinutes(newTimeArr[1]);
-				$scope.dtend.setHours(newTimeArr[0]);
-				$scope.dtend.setMinutes(newTimeArr[1]);
+			$scope.datechange = function() {
+				var startTimeArr = $scope.starttime.split(":");
+				var endTimeArr = $scope.endtime.split(":");
+				$scope.dtstart.setHours(startTimeArr[0]);
+				$scope.dtstart.setMinutes(startTimeArr[1]);
+				$scope.dtend.setHours(endTimeArr[0]);
+				$scope.dtend.setMinutes(endTimeArr[1]);
 				$scope.dtend.setFullYear($scope.dtstart.getFullYear());
 				$scope.dtend.setMonth($scope.dtstart.getMonth());
 				$scope.dtend.setDate($scope.dtstart.getDate());
-			}
+			};
+
+			$scope.starttimechange = function() {
+				var newTimeArr = $scope.starttime.split(":");
+				$scope.dtstart.setHours(newTimeArr[0]);
+				$scope.dtstart.setMinutes(newTimeArr[1]);
+				if ($scope.dtend < $scope.dtstart) {
+					$scope.dtend.setHours($scope.dtstart.getHours());
+					$scope.dtend.setMinutes($scope.dtstart.getMinutes());
+					$scope.endtime = $scope.starttime;
+				}
+			};
 			
 			$scope.endtimechange = function() {
 				var newTimeArr = $scope.endtime.split(":");
 				$scope.dtend.setHours(newTimeArr[0]);
 				$scope.dtend.setMinutes(newTimeArr[1]);
-			}
-		
-			$scope.timechange = function() {
-				$scope.starttimechange();
-				$scope.endtimechange();
-			}
+				if ($scope.dtend < $scope.dtstart) {
+					$scope.dtstart.setHours($scope.dtend.getHours());
+					$scope.dtstart.setMinutes($scope.dtend.getMinutes());
+					$scope.starttime = $scope.endtime;
+				}
+			};
 		
 			$scope.today = function() {
 				$scope.dtstart = new Date();
-				$scope.dtend = new Date();
-				$scope.dtstart.setMinutes(0);
 				$scope.dtstart.setSeconds(0);
 				$scope.dtstart.setMilliseconds(0);
-				$scope.dtend.setMinutes(0);
+				$scope.dtend = new Date();
 				$scope.dtend.setSeconds(0);
 				$scope.dtend.setMilliseconds(0);
-				$scope.timechange();
+				$scope.datechange();
 			};
 			$scope.today();
 
@@ -153,7 +162,7 @@
 		<div class="row">
 			<div class="col-sm-4">
 				<div style="display:inline-block; min-height:290px; padding:30px;">
-					<datepicker ng-model="dtstart" ng-change="timechange()" min-date="minDate" show-weeks="true" class="well well-sm"></datepicker>
+					<datepicker ng-model="dtstart" ng-change="datechange()" min-date="minDate" show-weeks="true" class="well well-sm"></datepicker>
 					<button type="button" class="btn btn-sm btn-info" ng-click="today()">Today</button>
 				</div>
 			</div>
@@ -182,6 +191,8 @@
 						<option value="17:00">5:00 pm</option>
 						<option value="17:30">5:30 pm</option>
 						<option value="18:00">6:00 pm</option>
+						<option value="18:30">6:30 pm</option>
+						<option value="19:00">7:00 pm</option>
 					</select>
 					<br/>End time:<br/>
 					<select class="form-control" ng-model="endtime" ng-change="endtimechange()" style="width: 120px;">
@@ -225,11 +236,11 @@
 			<div class="col-sm-6">
 				<div style="padding: 30px;">
 					<div ng-show="loading == true"/>
-						Loading...<br/>
+						Looking for rooms...<br/>
 						<img src={{loadingimg}} ng-show="loading == true"/>
 					</div>
 					<div ng-show="results != null">
-						Results: {{results.length}}<br/>
+						{{results.length}} rooms found<br/>
 						<table ng-show="results.length > 0" class="table table-striped">
 							<thead>
 								<th>

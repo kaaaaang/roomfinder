@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html ng-app="crfinder">
+<head>
+	<title>Zappos Conference Room Finder</title>
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap-theme.min.css">
+	<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.3.0-rc.3/angular.min.js"></script>
+	<script src="ui-bootstrap-tpls-0.11.0.min.js"></script>
+	<script type="text/javascript" src="http://gettopup.com/releases/latest/top_up-min.js"></script>
+	<script>
+		var crFinderApp = angular.module('crfinder', ['ui.bootstrap']);
+
+		var CrFinderCtrl = function ($scope, $http) {
+		
+			$scope.starttime = "8:00";
+			$scope.endtime = "8:00";	
+			$scope.attendees = 3;
+			$scope.roomtype = "all";
+			$scope.loading = false;
+
+			$scope.starttimechange = function() {
+				var newTimeArr = $scope.starttime.split(":");
+				$scope.endtime = $scope.starttime;
+				$scope.dtstart.setHours(newTimeArr[0]);
+				$scope.dtstart.setMinutes(newTimeArr[1]);
+				$scope.dtend.setHours(newTimeArr[0]);
+				$scope.dtend.setMinutes(newTimeArr[1]);
+				$scope.dtend.setFullYear($scope.dtstart.getFullYear());
+				$scope.dtend.setMonth($scope.dtstart.getMonth());
+				$scope.dtend.setDate($scope.dtstart.getDate());
+			}
+			
+			$scope.endtimechange = function() {
+				var newTimeArr = $scope.endtime.split(":");
+				$scope.dtend.setHours(newTimeArr[0]);
+				$scope.dtend.setMinutes(newTimeArr[1]);
+			}
+		
+			$scope.timechange = function() {
+				$scope.starttimechange();
+				$scope.endtimechange();
+			}
+		
+			$scope.today = function() {
+				$scope.dtstart = new Date();
+				$scope.dtend = new Date();
+				$scope.dtstart.setMinutes(0);
+				$scope.dtstart.setSeconds(0);
+				$scope.dtstart.setMilliseconds(0);
+				$scope.dtend.setMinutes(0);
+				$scope.dtend.setSeconds(0);
+				$scope.dtend.setMilliseconds(0);
+				$scope.timechange();
+			};
+			$scope.today();
+
+			$scope.toggleMin = function() {
+				$scope.minDate = $scope.minDate ? null : new Date();
+		  	};
+			$scope.toggleMin();
+
+			$scope.hstep = 1;
+			$scope.mstep = 15;
+
+			$scope.options = {
+				hstep: [1, 2, 3],
+				mstep: [1, 5, 10, 15, 25, 30]
+			};
+
+			$scope.ismeridian = true;
+			$scope.toggleMode = function() {
+				$scope.ismeridian = ! $scope.ismeridian;
+			};
+			
+			formatdate = function(date) {
+				var dateString = date.getFullYear();
+				var month = date.getMonth() + 1;
+				if (month < 10)
+					dateString += "-0" + month;
+				else
+					dateString += "-" + month;
+				var dateDay = date.getDate();
+				if (dateDay < 10)
+					dateString += "-0" + dateDay;
+				else
+					dateString += "-" + dateDay;
+				dateString += " ";
+				var hour = date.getHours();
+				if (hour < 10)
+					dateString += "0" + hour;
+				else
+					dateString += hour;
+				var minute = date.getMinutes();
+				if (minute < 10)
+					dateString += ":0" + minute;
+				else
+					dateString += ":" + minute;
+				return dateString;
+			};
+			
+			$scope.search = function() {
+				if ($scope.dtstart.getTime() == $scope.dtend.getTime()) {
+					alert("Meeting end time must not be the same as start time");
+					return;
+				} else if ($scope.dtend < $scope.dtstart) {
+					alert("Sorry, but time travel is not possible in our conference rooms.");
+					return;
+				}
+				var numImages = 17;
+				$scope.loadingimg = "loading" + Math.floor(Math.random() * numImages) + ".gif";
+				$scope.loading = true;
+				$scope.results = null;
+				$scope.orderByField = "name";
+				$scope.reverseSort = false;
+				var requestURL = "http://localhost:8080/room?startDate=";
+				//var requestURL = "http://10.48.35.190:8080/room?startDate=";
+				requestURL += formatdate($scope.dtstart);
+				requestURL += "&endDate=";
+				requestURL += formatdate($scope.dtend);
+				requestURL += "&requiredCapacity=";
+				requestURL += $scope.attendees;
+				if ($scope.roomtype == "casual") {
+					requestURL += "&isCasual=true";
+				} else if ($scope.roomtype == "noncasual") {
+					requestURL += "&isCasual=false";
+				}
+				$scope.query = requestURL;
+				$http({method: "GET", url: requestURL})
+				.success(function(data) {
+					$scope.results = data;
+					$scope.loading = false;
+				})
+				.error(function (data) {
+					alert("Error connecting to Exchange server");
+					$scope.loading = false;
+				});
+			};
+
+			$scope.mapname = function(roomName) {
+				var mapName = roomName.split('@')[0] + ".png";
+				return mapName;
+			};
+		};
+		
+		crFinderApp.controller("crFinderCtrl", CrFinderCtrl);
+	</script>
+</head>
+<body>
+	<div class="page-header text-center">
+		<img src="logo.png" width=465 height=140/>
+	</div>
+	<div ng-controller="crFinderCtrl">
+		<div class="row">
+			<div class="col-sm-4">
+				<div style="display:inline-block; min-height:290px; padding:30px;">
+					<datepicker ng-model="dtstart" ng-change="timechange()" min-date="minDate" show-weeks="true" class="well well-sm"></datepicker>
+					<button type="button" class="btn btn-sm btn-info" ng-click="today()">Today</button>
+				</div>
+			</div>
+			<div class="col-sm-2">
+				<div style="padding:30px;">
+					Start time:<br/>
+					<select class="form-control" ng-model="starttime" ng-change="starttimechange()" style="width: 120px;">
+						<option value="8:00">8:00 am</option>
+						<option value="8:30">8:30 am</option>
+						<option value="9:00">9:00 am</option>
+						<option value="9:30">9:30 am</option>
+						<option value="10:00">10:00 am</option>
+						<option value="10:30">10:30 am</option>
+						<option value="11:00">11:00 am</option>
+						<option value="11:30">11:30 am</option>
+						<option value="12:00">12:00 pm</option>
+						<option value="12:30">12:30 pm</option>
+						<option value="13:00">1:00 pm</option>
+						<option value="13:30">1:30 pm</option>
+						<option value="14:00">2:00 pm</option>
+						<option value="14:30">2:30 pm</option>
+						<option value="15:00">3:00 pm</option>
+						<option value="15:30">3:30 pm</option>
+						<option value="16:00">4:00 pm</option>
+						<option value="16:30">4:30 pm</option>
+						<option value="17:00">5:00 pm</option>
+						<option value="17:30">5:30 pm</option>
+						<option value="18:00">6:00 pm</option>
+					</select>
+					<br/>End time:<br/>
+					<select class="form-control" ng-model="endtime" ng-change="endtimechange()" style="width: 120px;">
+						<option value="8:00">8:00 am</option>
+						<option value="8:30">8:30 am</option>
+						<option value="9:00">9:00 am</option>
+						<option value="9:30">9:30 am</option>
+						<option value="10:00">10:00 am</option>
+						<option value="10:30">10:30 am</option>
+						<option value="11:00">11:00 am</option>
+						<option value="11:30">11:30 am</option>
+						<option value="12:00">12:00 pm</option>
+						<option value="12:30">12:30 pm</option>
+						<option value="13:00">1:00 pm</option>
+						<option value="13:30">1:30 pm</option>
+						<option value="14:00">2:00 pm</option>
+						<option value="14:30">2:30 pm</option>
+						<option value="15:00">3:00 pm</option>
+						<option value="15:30">3:30 pm</option>
+						<option value="16:00">4:00 pm</option>
+						<option value="16:30">4:30 pm</option>
+						<option value="17:00">5:00 pm</option>
+						<option value="17:30">5:30 pm</option>
+						<option value="18:00">6:00 pm</option>	
+						<option value="18:30">6:30 pm</option>
+						<option value="19:00">7:00 pm</option>
+					</select>
+					<br/>Number of Attendees:<br/>
+					<input class="form-control" ng-model="attendees" style="width: 120px;"/>
+					<br/>Room Type:<br/>
+					<select class="form-control" ng-model="roomtype" style="width: 120px;">
+						<option value="all">All</option>
+						<option value="casual">Casual</option>
+						<option value="noncasual">Non-Casual</option>
+					</select>
+					<br/>
+					<button class="btn btn-success" ng-show="loading == false" ng-click="search()">Search for Rooms</button>
+					<button class="btn btn-success" ng-show="loading == true"><i class="glyphicon glyphicon-refresh"> </i> Loading</button>
+				</div>
+			</div>
+			<div class="col-sm-6">
+				<div style="padding: 30px;">
+					<div ng-show="loading == true"/>
+						Loading...<br/>
+						<img src={{loadingimg}} ng-show="loading == true"/>
+					</div>
+					<div ng-show="results != null">
+						Results: {{results.length}}<br/>
+						<table ng-show="results.length > 0" class="table table-striped">
+							<thead>
+								<th>
+									<a href="#" ng-click="orderByField='name'; reverseSort = !reverseSort">
+										Room name
+									</a>
+								</th>
+								<th>
+									<a href="#" ng-click="orderByField='capacity'; reverseSort = !reverseSort">
+										Capacity
+									</a>
+								</th>
+								<th>
+									<a href="#" ng-click="orderByField='casual'; reverseSort = !reverseSort">
+										Casual?
+									</a>
+								</th>
+								<th>
+									Floor Map
+								</th>
+							</thead>
+							<tbody>
+								<tr ng-repeat="room in results | orderBy:orderByField:reverseSort">
+									<td>{{room.email.split("@")[0]}}</td>
+									<td>{{room.capacity}}</td>
+									<td>{{room.casual ? "Yes" : "No"}}</td>
+									<td><a href={{mapname(room.email)}} class="top_up"><img src="map.png" width=24 height=24/></a></td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

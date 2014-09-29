@@ -25,7 +25,7 @@ public class Application {
     @Bean
     public ExchangeService getExchangeService() throws URISyntaxException {
         ExchangeService service = new ExchangeService(ExchangeVersion.Exchange2010_SP2);
-        ExchangeCredentials credentials = new WebCredentials("USERNAME", "PASSWORD");
+        ExchangeCredentials credentials = new WebCredentials("USER", "PASS");
         service.setCredentials(credentials);
         service.setUrl(new URI("https://skynet.zappos.com/ews/exchange.asmx"));
         return service;

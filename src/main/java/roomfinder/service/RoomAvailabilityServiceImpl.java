@@ -6,10 +6,7 @@ import org.springframework.stereotype.Service;
 import roomfinder.domain.Room;
 import roomfinder.exception.ExchangeServiceException;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -79,6 +76,13 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
     public List<Room> getAllAvailableRooms(List<Room> rooms, Date startTime,
                                            Date endTime, int requiredCapacity,
                                            Boolean isCasual)throws ExchangeServiceException {
+
+        // Add a second on to the start time otherwise we get the previous meeting
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(startTime);
+        cal.add(Calendar.SECOND, 1);
+        startTime = cal.getTime();
+
         List<AttendeeInfo> attendees = new ArrayList<AttendeeInfo>();
         List<Room> availableRooms = new ArrayList<Room>();
 

@@ -10,6 +10,9 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Created with IntelliJ IDEA.
  * User: akang
@@ -22,10 +25,19 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
     @Autowired
     ExchangeService service;
 
+    private static final Logger logger = LoggerFactory.getLogger(RoomAvailabilityServiceImpl.class);
+
     private static final int RETRY_COUNT = 10;
-    private static final int BATCH_SIZE = 75;
+    private static final int BATCH_SIZE = Integer.valueOf(System.getProperty("batchsize", "75"));
+
+    private List<Room> allRooms;
+
     @Override
     public List<Room> getAllRooms() throws ExchangeServiceException {
+        if (allRooms != null) {
+            return allRooms;
+        }
+
         EmailAddressCollection roomList = null;
 
         // So, this API we are using dies randomly. It also only throws up "Exception"s
@@ -69,14 +81,15 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
                 }
             }
         }
+        allRooms = rooms;
         return rooms;
     }
 
     @Override
-    public List<Room> getAllAvailableRooms(List<Room> rooms, Date startTime,
+    public List<Room> getAllAvailableRooms(Date startTime,
                                            Date endTime, int requiredCapacity,
                                            Boolean isCasual)throws ExchangeServiceException {
-
+        List<Room> rooms = getAllRooms();
         // Add a second on to the start time otherwise we get the previous meeting
         Calendar cal = Calendar.getInstance();
         cal.setTime(startTime);
@@ -86,44 +99,46 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
         List<AttendeeInfo> attendees = new ArrayList<AttendeeInfo>();
         List<Room> availableRooms = new ArrayList<Room>();
 
-        for(Room room : rooms) {
+        for (Room room : rooms) {
             if((isCasual == null || room.isCasual() == isCasual) && room.getCapacity() >= requiredCapacity) {
                 attendees.add(new AttendeeInfo(room.getEmail()));
-            }
-            if(attendees.size() == BATCH_SIZE) {
-                GetUserAvailabilityResults results = null;
-                for(int i = 0; i < RETRY_COUNT; i++) {
-                    try {
-                        results = service.getUserAvailability(attendees,
-                                new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
-                    } catch(Exception e) {
-                        throw new ExchangeServiceException(e);
-                    }
-                    if(results != null) {
-                        break;
-                    }
-                }
-
-                availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
-                attendees.clear();
-            }
+            }   
         }
 
-        GetUserAvailabilityResults results = null;
-        if(attendees.size() > 0) {
-            for(int i = 0; i < RETRY_COUNT; i++) {
+        int i = 0;
+        List<AttendeeInfo> batch = new ArrayList<AttendeeInfo>();
+
+        while (i < attendees.size()) {
+            while (i < attendees.size() && batch.size() < BATCH_SIZE) {
+                batch.add(attendees.get(i));
+                i++;
+            }
+
+            GetUserAvailabilityResults results = null;
+
+            for (int attempt = 0; attempt < RETRY_COUNT; attempt++) {
                 try {
-                    results = service.getUserAvailability(attendees,
+                    logger.info("Get User Availability for " + batch.size() + " rooms: "); 
+                    results = service.getUserAvailability(batch,
                             new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
-                } catch(Exception e) {
-                    throw new ExchangeServiceException(e);
+                    availableRooms.addAll(getAvailableRooms(rooms, batch, results));
+                } catch (Exception e) {
                 }
-                if(results != null) {
+                if (results != null) {
                     break;
                 }
             }
 
-            availableRooms.addAll(getAvailableRooms(rooms, attendees, results));
+            int batchIndex = 0;
+            for (AttendeeAvailability attendeeAvailability : results.getAttendeesAvailability()) {
+                if (attendeeAvailability.getErrorCode() != ServiceError.NoError) {
+                    logger.info("Error code: " + attendeeAvailability.getErrorCode());
+                    attendees.add(batch.get(batchIndex));
+                }
+                batchIndex++;
+            }
+
+            batch.clear();
         }
 
         return availableRooms;

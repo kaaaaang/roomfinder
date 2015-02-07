@@ -43,7 +43,7 @@ public class RoomFinderControllerImpl implements RoomFinderController {
         } catch (ParseException e) {
             throw new IllegalArgumentException("End date is not formatted correctly (YYYY/MM/DD HH:MI (AM|PM))");
         }
-        return roomAvailabilityService.getAllAvailableRooms(roomAvailabilityService.getAllRooms(), start, end, requiredCapacity, isCasual);
+        return roomAvailabilityService.getAllAvailableRooms(start, end, requiredCapacity, isCasual);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

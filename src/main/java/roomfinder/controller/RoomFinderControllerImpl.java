@@ -11,6 +11,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 /**
  * Created with IntelliJ IDEA.
@@ -28,6 +29,7 @@ public class RoomFinderControllerImpl implements RoomFinderController {
     public List<Room> findRoom(@RequestParam String startDate, @RequestParam String endDate, @RequestParam int requiredCapacity,
                                @RequestParam(required = false) Boolean isCasual) throws ExchangeServiceException, IllegalArgumentException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
+        formatter.setTimeZone(TimeZone.getTimeZone("America/Los_Angeles"));
 
         Date start = null;
         try {

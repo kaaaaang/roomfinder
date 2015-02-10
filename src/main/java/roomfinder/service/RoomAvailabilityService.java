@@ -15,5 +15,5 @@ import java.util.List;
  */
 public interface RoomAvailabilityService {
     public List<Room> getAllRooms() throws ExchangeServiceException;
-    public List<Room> getAllAvailableRooms(Date startTime, Date endTime, int requiredCapacity, Boolean isCasual) throws ExchangeServiceException;
+    public List<Room> getAllAvailableRooms(Date startTime, Date endTime, int requiredCapacity, Boolean isCasual, String location) throws ExchangeServiceException;
 }

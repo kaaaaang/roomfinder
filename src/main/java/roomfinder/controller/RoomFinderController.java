@@ -14,5 +14,5 @@ import java.util.List;
  * To change this template use File | Settings | File Templates.
  */
 public interface RoomFinderController {
-    public List<Room> findRoom(String startDate, String endDate, int requiredCapacity, Boolean isCasual) throws ExchangeServiceException, ParseException;
+    public List<Room> findRoom(String startDate, String endDate, int requiredCapacity, Boolean isCasual, String location) throws ExchangeServiceException, ParseException;
 }

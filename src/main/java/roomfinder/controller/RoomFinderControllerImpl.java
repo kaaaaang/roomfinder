@@ -27,7 +27,7 @@ public class RoomFinderControllerImpl implements RoomFinderController {
 
     @RequestMapping(value = "/room", method = RequestMethod.GET)
     public List<Room> findRoom(@RequestParam String startDate, @RequestParam String endDate, @RequestParam int requiredCapacity,
-                               @RequestParam(required = false) Boolean isCasual) throws ExchangeServiceException, IllegalArgumentException {
+                               @RequestParam(required = false) Boolean isCasual, @RequestParam String location) throws ExchangeServiceException, IllegalArgumentException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         formatter.setTimeZone(TimeZone.getTimeZone("America/Los_Angeles"));
 
@@ -45,7 +45,7 @@ public class RoomFinderControllerImpl implements RoomFinderController {
         } catch (ParseException e) {
             throw new IllegalArgumentException("End date is not formatted correctly (YYYY/MM/DD HH:MI (AM|PM))");
         }
-        return roomAvailabilityService.getAllAvailableRooms(start, end, requiredCapacity, isCasual);
+        return roomAvailabilityService.getAllAvailableRooms(start, end, requiredCapacity, isCasual, location);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

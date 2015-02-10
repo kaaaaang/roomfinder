@@ -3,6 +3,7 @@ package roomfinder.service;
 import microsoft.exchange.webservices.data.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import roomfinder.domain.ProximityComparator;
 import roomfinder.domain.Room;
 import roomfinder.exception.ExchangeServiceException;
 
@@ -27,8 +28,9 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
 
     private static final Logger logger = LoggerFactory.getLogger(RoomAvailabilityServiceImpl.class);
 
-    private static final int RETRY_COUNT = 10;
-    private static final int BATCH_SIZE = Integer.valueOf(System.getProperty("batchsize", "75"));
+    private static final int RETRY_COUNT = 1000;
+    private static final int MAX_RESULTS = 1;
+    private static final int BATCH_SIZE = Integer.valueOf(System.getProperty("batchsize", "5"));
 
     private List<Room> allRooms;
 
@@ -46,6 +48,10 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
                 roomList = service.getRoomLists();
             } catch (Exception e) {
                 // do nothing because this shitty service dies sometimes randomly
+                try {
+                    Thread.sleep(1000);
+                } catch (Exception e2) {
+                }
             }
             if(roomList != null) {
                 break;
@@ -62,6 +68,10 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
                         roomEmails = service.getRooms(address);
                     } catch (Exception e) {
                         // do nothing because this shitty service dies sometimes
+                        try {
+                            Thread.sleep(1000);
+                        } catch (Exception e2) {
+                        }
                     }
                     if(roomEmails != null) {
                         break;
@@ -88,8 +98,12 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
     @Override
     public List<Room> getAllAvailableRooms(Date startTime,
                                            Date endTime, int requiredCapacity,
-                                           Boolean isCasual)throws ExchangeServiceException {
-        List<Room> rooms = getAllRooms();
+                                           Boolean isCasual, String location)throws ExchangeServiceException {
+        List<Room> allRooms = getAllRooms();
+        List<Room> rooms = new ArrayList<Room>(allRooms);
+
+        Collections.sort(rooms, new ProximityComparator(location));
+
         // Add a second on to the start time otherwise we get the previous meeting
         Calendar cal = Calendar.getInstance();
         cal.setTime(startTime);
@@ -108,7 +122,7 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
         int i = 0;
         List<AttendeeInfo> batch = new ArrayList<AttendeeInfo>();
 
-        while (i < attendees.size()) {
+        while (i < attendees.size() && availableRooms.size() < MAX_RESULTS) {
             while (i < attendees.size() && batch.size() < BATCH_SIZE) {
                 batch.add(attendees.get(i));
                 i++;
@@ -123,6 +137,10 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
                             new TimeWindow(startTime, endTime), AvailabilityData.FreeBusy);
                     availableRooms.addAll(getAvailableRooms(rooms, batch, results));
                 } catch (Exception e) {
+                    try {
+                        Thread.sleep(1000);
+                    } catch (Exception e2) {
+                    }
                 }
                 if (results != null) {
                     break;
@@ -133,7 +151,7 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
             for (AttendeeAvailability attendeeAvailability : results.getAttendeesAvailability()) {
                 if (attendeeAvailability.getErrorCode() != ServiceError.NoError) {
                     logger.info("Error code: " + attendeeAvailability.getErrorCode());
-                    attendees.add(batch.get(batchIndex));
+                    attendees.add(0, batch.get(batchIndex));
                 }
                 batchIndex++;
             }

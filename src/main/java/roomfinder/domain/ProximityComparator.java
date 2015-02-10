@@ -18,7 +18,14 @@ public class ProximityComparator implements Comparator<Room> {
         String f1 = r1.getEmail().substring(0, 3);
         String f2 = r2.getEmail().substring(0, 3);
 
-	return (score(f1) - score(f2));
+        int score1 = score(f1);
+        int score2 = score(f2);
+
+        if (score1 == score2) {
+            return r1.getCapacity() - r2.getCapacity();
+        } else {
+            return (score1 - score2);
+        }
     }
 
     private int score(String floor) {

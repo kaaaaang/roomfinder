@@ -118,6 +118,7 @@
 			};
 			
 			$scope.search = function() {
+				$scope.showimage = false;
 				if ($scope.dtstart.getTime() == $scope.dtend.getTime()) {
 					alert("Meeting end time must not be the same as start time");
 					return;
@@ -155,6 +156,10 @@
 					alert("Error connecting to Exchange server");
 					$scope.loading = false;
 				});
+				setTimeout(function() {
+					$scope.showimage = true;
+					$scope.$apply();
+				}, 5000);
 			};
 
 			$scope.mapname = function(roomName) {
@@ -270,7 +275,7 @@
 					<div ng-show="loading == true"/>
 						Looking for rooms...<br/>
 
-						<img src={{loadingimg}} ng-show="loading == true"/>
+						<img src={{loadingimg}} ng-show="loading == true && showimage == true"/>
 					</div>
 					<div ng-show="results != null">
 						{{results.length}} rooms found<br/>

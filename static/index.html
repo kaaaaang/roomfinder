@@ -119,18 +119,23 @@
 			};
 
 			var onsuccess = function(data) {
+				$scope.progressValue = 100;
 				clearTimeout(imageTimeout);
-				if ($scope.results != null) {
-					$scope.results = $scope.results.concat(data.rooms);
-				} else {
-					$scope.results = data.rooms;
-				}
-				$scope.startWith = data.startWith;
-				$scope.loading = false;
-				$scope.checkedAll = data.checkedAll;
-				if (data.checkedAll == false) {
-					$scope.paused = true;
-				}
+				clearInterval(loadingAnimation);
+				setTimeout(function() {
+					if ($scope.results != null) {
+						$scope.results = $scope.results.concat(data.rooms);
+					} else {
+						$scope.results = data.rooms;
+					}
+					$scope.startWith = data.startWith;
+					$scope.loading = false;
+					$scope.checkedAll = data.checkedAll;
+					if (data.checkedAll == false) {
+						$scope.paused = true;
+					}
+					$scope.$apply();
+				}, 500);
 			};
 			
 			var onerror = function(data) {
@@ -139,9 +144,24 @@
 				$scope.loading = false;
 			};
 
+			var animateLoadingBar = function() {
+				$scope.progressValue = 0;
+				var progressValue = 0;
+				loadingAnimation = setInterval(function() {
+					progressValue += (100/120);
+					if (progressValue < 5) {
+						$scope.progressValue = 5;
+					} else {
+						$scope.progressValue = Math.round(progressValue);
+					}
+					$scope.$apply();
+				}, 1000);
+			};
+
 			$scope.keeplooking = function() {
 				$scope.paused = false;
 				$scope.loading = true;
+				animateLoadingBar();
 				$http({method: "GET", url: $scope.query + "&startWith=" + $scope.startWith})
 				.success(onsuccess)
 				.error(onerror);
@@ -164,6 +184,7 @@
 				var numImages = 17;
 				$scope.loadingimg = "loading" + Math.floor(Math.random() * numImages) + ".gif";
 				$scope.loading = true;
+				animateLoadingBar();
 				$scope.results = null;
 				$scope.orderByField = "name";
 				$scope.reverseSort = false;
@@ -214,7 +235,10 @@
 			</div>
 			<div class="col-sm-2">
 				<div style="padding:30px;">
-					Start time:<br/>
+					<strong>Date:</strong><br/>
+					{{dtstart | date:'EEEE,'}}<br/>
+					{{dtstart | date:'MMMM d, yyyy'}}<br/><br/>
+					<strong>Start time:</strong><br/>
 					<select class="form-control" ng-model="starttime" ng-change="starttimechange()" style="width: 120px;">
 						<option value="8:00">8:00 am</option>
 						<option value="8:30">8:30 am</option>
@@ -240,7 +264,7 @@
 						<option value="18:30">6:30 pm</option>
 						<option value="19:00">7:00 pm</option>
 					</select>
-					<br/>End time:<br/>
+					<br/><strong>End time:</strong><br/>
 					<select class="form-control" ng-model="endtime" ng-change="endtimechange()" style="width: 120px;">
 						<option value="8:00">8:00 am</option>
 						<option value="8:30">8:30 am</option>
@@ -266,9 +290,9 @@
 						<option value="18:30">6:30 pm</option>
 						<option value="19:00">7:00 pm</option>
 					</select>
-					<br/>Number of Attendees:<br/>
+					<br/><strong>Number of Attendees:</strong><br/>
 					<input class="form-control" ng-model="attendees" style="width: 120px;"/>
-					<br/>Preferred Location:<br/>
+					<br/><strong>Preferred Location:</strong><br/>
 					<select class="form-control" ng-model="location" style="width: 120px;"/>
 						<option value="B00">Basement</option>
 						<option value="A01">Annex 1</option>
@@ -288,7 +312,7 @@
 						<option value="T09">Tower 9</option>
 						<option value="T10">Tower 10</option>
 					</select>
-					<br/>Room Type:<br/>
+					<br/><strong>Room Type:</strong><br/>
 					<select class="form-control" ng-model="roomtype" style="width: 120px;">
 						<option value="all">All</option>
 						<option value="casual">Casual</option>
@@ -302,12 +326,13 @@
 			<div class="col-sm-6">
 				<div style="padding: 30px;">
 					<div ng-show="loading == true"/>
-						Looking for rooms...<br/>
-
-						<img src={{loadingimg}} ng-show="loading == true && showimage == true"/>
+						<strong>Looking for rooms...</strong><br/>
+<progressbar class="progress-striped active" value="progressValue" type="success"></progressbar>
+<!--
+						<img src={{loadingimg}} ng-show="loading == true && showimage == true"/> -->
 					</div>
 					<div ng-show="results != null">
-						{{results.length}} rooms found<br/>
+						<strong>{{results.length}} rooms found</strong><br/>
 						<table ng-show="results.length > 0" class="table table-striped">
 							<thead>
 								<th>
@@ -339,7 +364,7 @@
 							</tbody>
 						</table>
 						<button type="button" class="btn btn-default" ng-show="paused == true" ng-click="keeplooking()">Keep looking</button>
-						<span ng-show="checkedAll == true">All rooms have been searched</span>
+						<span ng-show="checkedAll == true"><strong>All rooms have been searched</strong></span>
 					</div>
 				</div>
 			</div>

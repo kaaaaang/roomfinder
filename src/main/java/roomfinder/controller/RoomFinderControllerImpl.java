@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import roomfinder.domain.Room;
+import roomfinder.domain.RoomResponse;
 import roomfinder.exception.ExchangeServiceException;
 import roomfinder.service.RoomAvailabilityService;
 
@@ -26,8 +27,9 @@ public class RoomFinderControllerImpl implements RoomFinderController {
     RoomAvailabilityService roomAvailabilityService;
 
     @RequestMapping(value = "/room", method = RequestMethod.GET)
-    public List<Room> findRoom(@RequestParam String startDate, @RequestParam String endDate, @RequestParam int requiredCapacity,
-                               @RequestParam(required = false) Boolean isCasual, @RequestParam String location) throws ExchangeServiceException, IllegalArgumentException {
+    public RoomResponse findRoom(@RequestParam String startDate, @RequestParam String endDate, @RequestParam int requiredCapacity,
+                               @RequestParam(required = false) Boolean isCasual, @RequestParam String location,
+                               @RequestParam(required = false) Integer startWith) throws ExchangeServiceException, IllegalArgumentException {
         SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd HH:mm");
         formatter.setTimeZone(TimeZone.getTimeZone("America/Los_Angeles"));
 
@@ -45,7 +47,7 @@ public class RoomFinderControllerImpl implements RoomFinderController {
         } catch (ParseException e) {
             throw new IllegalArgumentException("End date is not formatted correctly (YYYY/MM/DD HH:MI (AM|PM))");
         }
-        return roomAvailabilityService.getAllAvailableRooms(start, end, requiredCapacity, isCasual, location);
+        return roomAvailabilityService.getAllAvailableRooms(start, end, requiredCapacity, isCasual, location, startWith);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

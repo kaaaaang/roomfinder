@@ -1,6 +1,7 @@
 package roomfinder.service;
 
 import roomfinder.domain.Room;
+import roomfinder.domain.RoomResponse;
 import roomfinder.exception.ExchangeServiceException;
 
 import java.util.Date;
@@ -15,5 +16,5 @@ import java.util.List;
  */
 public interface RoomAvailabilityService {
     public List<Room> getAllRooms() throws ExchangeServiceException;
-    public List<Room> getAllAvailableRooms(Date startTime, Date endTime, int requiredCapacity, Boolean isCasual, String location) throws ExchangeServiceException;
+    public RoomResponse getAllAvailableRooms(Date startTime, Date endTime, int requiredCapacity, Boolean isCasual, String location, Integer startWith) throws ExchangeServiceException;
 }

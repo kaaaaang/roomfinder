@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import roomfinder.domain.ProximityComparator;
 import roomfinder.domain.Room;
+import roomfinder.domain.RoomResponse;
 import roomfinder.exception.ExchangeServiceException;
 
 import java.util.*;
@@ -96,13 +97,14 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
     }
 
     @Override
-    public List<Room> getAllAvailableRooms(Date startTime,
+    public RoomResponse getAllAvailableRooms(Date startTime,
                                            Date endTime, int requiredCapacity,
-                                           Boolean isCasual, String location)throws ExchangeServiceException {
+                                           Boolean isCasual, String location,
+                                           Integer startWith) throws ExchangeServiceException {
         List<Room> allRooms = getAllRooms();
-        List<Room> rooms = new ArrayList<Room>(allRooms);
+        List<Room> allRoomsSorted = new ArrayList<Room>(allRooms);
 
-        Collections.sort(rooms, new ProximityComparator(location));
+        Collections.sort(allRoomsSorted, new ProximityComparator(location));
 
         // Add a second on to the start time otherwise we get the previous meeting
         Calendar cal = Calendar.getInstance();
@@ -112,6 +114,13 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
 
         List<AttendeeInfo> attendees = new ArrayList<AttendeeInfo>();
         List<Room> availableRooms = new ArrayList<Room>();
+
+        List<Room> rooms;
+        if (startWith != null) {
+            rooms = allRoomsSorted.subList(startWith, allRoomsSorted.size());
+        } else {
+            rooms = allRoomsSorted;
+        }
 
         for (Room room : rooms) {
             if((isCasual == null || room.isCasual() == isCasual) && room.getCapacity() >= requiredCapacity) {
@@ -151,7 +160,7 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
             for (AttendeeAvailability attendeeAvailability : results.getAttendeesAvailability()) {
                 if (attendeeAvailability.getErrorCode() != ServiceError.NoError) {
                     logger.info("Error code: " + attendeeAvailability.getErrorCode());
-                    attendees.add(0, batch.get(batchIndex));
+                    attendees.add(i, batch.get(batchIndex));
                 }
                 batchIndex++;
             }
@@ -159,7 +168,18 @@ public class RoomAvailabilityServiceImpl implements RoomAvailabilityService {
             batch.clear();
         }
 
-        return availableRooms;
+        startWith = 0;
+        boolean checkedAll = (i == attendees.size());
+        if (!checkedAll) {
+            String startEmail = attendees.get(i+1).getSmtpAddress();
+            for (int j = 0; j < allRoomsSorted.size(); j++) {
+                if (allRoomsSorted.get(j).getEmail().equals(startEmail)) {
+                    startWith = j;
+                    break;
+                }
+            }
+        }
+        return new RoomResponse(checkedAll, startWith, availableRooms);
     }
 
     private List<Room> getAvailableRooms(List<Room> rooms, List<AttendeeInfo> attendees, GetUserAvailabilityResults results) {

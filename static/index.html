@@ -27,6 +27,7 @@
 			$scope.location = "T04";
 			$scope.roomtype = "all";
 			$scope.loading = false;
+			$scope.paused = false;
 
 			$scope.datechange = function() {
 				var startTimeArr = $scope.starttime.split(":");
@@ -116,7 +117,41 @@
 					dateString += ":" + minute;
 				return dateString;
 			};
+
+			var onsuccess = function(data) {
+				clearTimeout(imageTimeout);
+				if ($scope.results != null) {
+					$scope.results = $scope.results.concat(data.rooms);
+				} else {
+					$scope.results = data.rooms;
+				}
+				$scope.startWith = data.startWith;
+				$scope.loading = false;
+				$scope.checkedAll = data.checkedAll;
+				if (data.checkedAll == false) {
+					$scope.paused = true;
+				}
+			};
 			
+			var onerror = function(data) {
+				clearTimeout(imageTimeout);
+				alert("Error connecting to Exchange server");
+				$scope.loading = false;
+			};
+
+			$scope.keeplooking = function() {
+				$scope.paused = false;
+				$scope.loading = true;
+				$http({method: "GET", url: $scope.query + "&startWith=" + $scope.startWith})
+				.success(onsuccess)
+				.error(onerror);
+
+				imageTimeout = setTimeout(function() {
+					$scope.showimage = true;
+					$scope.$apply();
+				}, 5000);
+			};
+
 			$scope.search = function() {
 				$scope.showimage = false;
 				if ($scope.dtstart.getTime() == $scope.dtend.getTime()) {
@@ -148,15 +183,9 @@
 				}
 				$scope.query = requestURL;
 				$http({method: "GET", url: requestURL})
-				.success(function(data) {
-					$scope.results = data;
-					$scope.loading = false;
-				})
-				.error(function (data) {
-					alert("Error connecting to Exchange server");
-					$scope.loading = false;
-				});
-				setTimeout(function() {
+				.success(onsuccess)
+				.error(onerror);
+				imageTimeout = setTimeout(function() {
 					$scope.showimage = true;
 					$scope.$apply();
 				}, 5000);
@@ -309,6 +338,8 @@
 								</tr>
 							</tbody>
 						</table>
+						<button type="button" class="btn btn-default" ng-show="paused == true" ng-click="keeplooking()">Keep looking</button>
+						<span ng-show="checkedAll == true">All rooms have been searched</span>
 					</div>
 				</div>
 			</div>
